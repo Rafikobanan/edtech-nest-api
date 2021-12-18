@@ -1,6 +1,7 @@
 import { cookies } from '../config';
 import {
   Controller,
+  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
@@ -11,19 +12,23 @@ import {
   Res,
   UseGuards
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 import { UsersService } from '../users/users.service';
+import { AuthGuard } from '@nestjs/passport';
+import { AuthService } from './auth.service';
 
 @Controller('api/auth')
 export class AuthController {
-  constructor(private usersService: UsersService) {}
+  constructor(
+    private usersService: UsersService,
+    private authService: AuthService
+  ) {}
 
   @UseGuards(AuthGuard('local-login'))
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Res({ passthrough: true }) res: Response, @Req() req: Request) {
-    const { accessToken, refreshToken } = await this.usersService.loginById(
+    const { accessToken, refreshToken } = await this.authService.loginById(
       (req.user as any)._id
     );
 
@@ -38,8 +43,6 @@ export class AuthController {
       refreshToken,
       cookies.DEFAULT_COOKIE_OPTIONS
     );
-
-    return { accessToken };
   }
 
   @UseGuards(AuthGuard('local-signup'))
@@ -56,9 +59,7 @@ export class AuthController {
       throw new NotFoundException();
     });
 
-    const { accessToken, refreshToken } = await this.usersService.loginById(
-      _id
-    );
+    const { accessToken, refreshToken } = await this.authService.loginById(_id);
 
     res.cookie(
       cookies.ACCESS_TOKEN,
@@ -71,5 +72,43 @@ export class AuthController {
       refreshToken,
       cookies.DEFAULT_COOKIE_OPTIONS
     );
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response
+  ) {
+    try {
+      const { accessToken, refreshToken } = await this.authService.refresh(
+        req.cookies[cookies.ACCESS_TOKEN],
+        req.cookies[cookies.REFRESH_TOKEN]
+      );
+
+      res.cookie(
+        cookies.ACCESS_TOKEN,
+        accessToken,
+        cookies.DEFAULT_COOKIE_OPTIONS
+      );
+
+      res.cookie(
+        cookies.REFRESH_TOKEN,
+        refreshToken,
+        cookies.DEFAULT_COOKIE_OPTIONS
+      );
+    } catch (e) {
+      res.cookie(cookies.ACCESS_TOKEN, '', {
+        ...cookies.DEFAULT_COOKIE_OPTIONS,
+        maxAge: -1
+      });
+
+      res.cookie(cookies.REFRESH_TOKEN, '', {
+        ...cookies.DEFAULT_COOKIE_OPTIONS,
+        maxAge: -1
+      });
+
+      throw new ForbiddenException();
+    }
   }
 }

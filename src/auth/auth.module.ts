@@ -4,6 +4,7 @@ import { envs } from '../config';
 import { MailModule } from '../mail/mail.module';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import {
   LocalLoginStrategy,
@@ -19,7 +20,12 @@ import {
       signOptions: { expiresIn: '30s' }
     })
   ],
-  providers: [LocalLoginStrategy, LocalRegistrationStrategy, JwtStrategy],
+  providers: [
+    AuthService,
+    LocalLoginStrategy,
+    LocalRegistrationStrategy,
+    JwtStrategy
+  ],
   controllers: [AuthController]
 })
 export class AuthModule {}

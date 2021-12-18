@@ -1,7 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import * as jwt from 'jsonwebtoken';
 import { Collection, Db, ObjectId } from 'mongodb';
-import { envs } from '../config';
 import { UsersModel } from './users.model';
 
 @Injectable()
@@ -15,18 +13,12 @@ export class UsersService {
     this.collection = db.collection('users');
   }
 
-  async loginById(_id: ObjectId) {
-    const accessToken = jwt.sign({ _id }, envs.ACCESS_TOKEN_SECRET, {
-      expiresIn: '30s'
-    });
-
-    const refreshToken = jwt.sign({ _id }, envs.REFRESH_TOKEN_SECRET, {
-      expiresIn: '7d'
-    });
-
-    await this.pushRefreshToken(_id, refreshToken);
-
-    return { accessToken, refreshToken };
+  getUserInfo(user: UsersModel) {
+    return {
+      email: user.email,
+      name: user.name,
+      lastName: user.lastName
+    };
   }
 
   async save(user: UsersModel) {
@@ -42,10 +34,26 @@ export class UsersService {
       .then((res) => res.value._id);
   }
 
+  async isRefreshTokenExisted(_id: ObjectId, refreshToken: string) {
+    return this.collection.count({
+      _id,
+      refreshTokens: { $in: [refreshToken] }
+    });
+  }
+
   async pushRefreshToken(_id: ObjectId, refreshToken: string) {
     await this.collection.updateOne(
       { _id },
       { $push: { refreshTokens: refreshToken } }
+    );
+  }
+
+  async removeRefreshToken(_id: ObjectId, refreshToken: string) {
+    await this.collection.updateOne(
+      { _id },
+      {
+        $pull: { refreshTokens: refreshToken }
+      }
     );
   }
 
