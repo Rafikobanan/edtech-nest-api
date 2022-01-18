@@ -46,9 +46,9 @@ export class AuthController {
   }
 
   @UseGuards(AuthGuard('local-signup'))
-  @Post('registration')
+  @Post('register')
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  async registration() {}
+  async register() {}
 
   @Get('activate/:link')
   async verifyEmail(
