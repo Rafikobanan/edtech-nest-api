@@ -111,4 +111,18 @@ export class AuthController {
       throw new ForbiddenException();
     }
   }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  async logout(@Res({ passthrough: true }) res: Response) {
+    res.cookie(cookies.ACCESS_TOKEN, '', {
+      ...cookies.DEFAULT_COOKIE_OPTIONS,
+      maxAge: -1
+    });
+
+    res.cookie(cookies.REFRESH_TOKEN, '', {
+      ...cookies.DEFAULT_COOKIE_OPTIONS,
+      maxAge: -1
+    });
+  }
 }
